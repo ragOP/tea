@@ -541,7 +541,8 @@
             
             <style>
                 .nw-form {
-                    display: none;
+                    display: block;
+                    margin-top: 20px;
                 }
 
                 #order {
@@ -960,16 +961,11 @@ He returned to sports and even added paragliding to his list of hobbies. Now he 
             // 显示产品表单
             function showProductForm() {
                 if (formShown) return;
-                
+
                 formShown = true;
                 orderForm.style.display = 'block';
                 saveToStorage();
                 initTimer();
-                
-                // 滚动到表单位置
-                setTimeout(function() {
-                    orderForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 300);
             }
 
 
@@ -979,29 +975,41 @@ He returned to sports and even added paragliding to his list of hobbies. Now he 
             
             
 function initVideoListener() {
-    setTimeout(function() {
-        if (!window.smartplayer || !window.smartplayer.instances || !window.smartplayer.instances[0]) {
-            // 还没初始化，继续等待
-            setTimeout(initVideoListener, 1000);
-            return;
-        }
+                var attempts = 0;
 
-        var inst = window.smartplayer.instances[0];
-        var duration = inst.instance.duration;
+                function startWatchVideoProgress() {
+                    if (typeof smartplayer === 'undefined' || !(smartplayer.instances && smartplayer.instances.length)) {
+                        if (attempts >= 10) {
+                            showProductForm();
+                            return;
+                        }
+                        attempts += 1;
+                        setTimeout(startWatchVideoProgress, 1000);
+                        return;
+                    }
 
-        inst.on('timeupdate', function(currentTime) {
-            if (formShown) return;
-            if (!duration) duration = inst.instance.duration;
-            if (duration > 0) {
-                var progress = (currentTime / duration) * 100;
-                if (progress >= 80) {
-                    showProductForm();
+                    var inst = smartplayer.instances[0];
+
+                    inst.on('timeupdate', function() {
+                        if (formShown) return;
+
+                        var video = inst.video;
+                        if (!video) return;
+
+                        var duration = video.duration;
+                        var currentTime = video.currentTime;
+
+                        if (duration > 0 && (currentTime / duration) * 100 >= 80) {
+                            showProductForm();
+                            setTimeout(function() {
+                                orderForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 300);
+                        }
+                    });
                 }
-            }
-        });
 
-    }, 2000);
-}       
+                startWatchVideoProgress();
+            }       
 
 
 
@@ -1021,33 +1029,16 @@ function initVideoListener() {
             
             // 页面加载完成后初始化
             function init() {
-                // 设置当前日期
                 setCurrentDate();
-                
-                // 先检查缓存，如果已显示过，直接显示
-                if (checkStorage()) {
-                    // 如果已经显示过，仍然初始化倒计时（但表单已经显示了）
-                    initTimer();
-                    return;
-                }
-                
-            
-                // 初始化视频监听
+                showProductForm();
                 initVideoListener();
             }
-            
+
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', init);
             } else {
                 init();
             }
-            
-            // 也监听window load事件，确保所有资源加载完成
-            window.addEventListener('load', function() {
-                if (!formShown) {
-                    setTimeout(initVideoListener, 1000);
-                }
-            });
         })();
     </script>
 
